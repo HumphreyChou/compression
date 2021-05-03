@@ -310,7 +310,7 @@ class HiFiC(object):
         builder = tfds.builder(
             tfds_arguments.dataset_name, data_dir=tfds_arguments.downloads_dir)
         builder.download_and_prepare()
-        split = "train" if self.training else "validation"
+        split = "train" if self.training else "test"
         dataset = builder.as_dataset(split=split)
 
       def _preprocess(features):

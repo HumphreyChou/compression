@@ -43,7 +43,7 @@ def eval_trained_model(config_name,
                        out_dir,
                        images_glob,
                        tfds_arguments: helpers.TFDSArguments,
-                       max_images=None):
+                       max_images):
   """Evaluate a trained model."""
   config = configs.get_config(config_name)
   hific = model.HiFiC(config, helpers.ModelMode.EVALUATION)
@@ -72,7 +72,7 @@ def eval_trained_model(config_name,
     hific.prepare_for_arithmetic_coding(sess)
 
     for i in itertools.count(0):
-      if max_images and i == max_images:
+      if i == max_images:
         break
       try:
         inp_np, otp_np, bitstring_np = \
@@ -82,7 +82,8 @@ def eval_trained_model(config_name,
         assert c == 3
         bpp = get_arithmetic_coding_bpp(
             bitstring, bitstring_np, num_pixels=h * w)
-
+        
+        # Modified by Zhou Yuhan
         metrics = {'psnr': get_psnr(inp_np, otp_np),
                    'bpp_real': bpp}
 
@@ -146,6 +147,9 @@ def parse_args(argv):
 
   helpers.add_tfds_arguments(parser)
 
+  # Modified by Zhou Yuhan
+  parser.add_argument('--max_image', required=True, help='max image number to evaluate')
+
   args = parser.parse_args(argv[1:])
   return args
 
@@ -153,7 +157,8 @@ def parse_args(argv):
 def main(args):
   eval_trained_model(args.config, args.ckpt_dir, args.out_dir,
                      args.images_glob,
-                     helpers.parse_tfds_arguments(args))
+                     helpers.parse_tfds_arguments(args),
+                     max_images=int(args.max_image))
 
 
 if __name__ == '__main__':

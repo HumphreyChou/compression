@@ -83,7 +83,6 @@ def eval_trained_model(config_name,
         bpp = get_arithmetic_coding_bpp(
             bitstring, bitstring_np, num_pixels=h * w)
         
-        # Modified by Zhou Yuhan
         metrics = {'psnr': get_psnr(inp_np, otp_np),
                    'bpp_real': bpp}
 
@@ -95,11 +94,11 @@ def eval_trained_model(config_name,
           accumulated_metrics[metric].append(value)
 
         # Save images.
-        name = image_names.get(i, f'img_{i:010d}')
+        name = image_names.get(i, f'img_{i}')
         Image.fromarray(inp_np).save(
-            os.path.join(out_dir, f'{name}_inp.png'))
+            os.path.join(out_dir, f'{name}_inp.tiff'))
         Image.fromarray(otp_np).save(
-            os.path.join(out_dir, f'{name}_otp_{bpp:.3f}.png'))
+            os.path.join(out_dir, f'{name}_otp.tiff'))
 
       except tf.errors.OutOfRangeError:
         print('No more inputs.')

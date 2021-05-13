@@ -73,7 +73,9 @@ def subsample(inputs,factor,scope=None):
     if factor==1:
         return inputs
     else:
-        return slim.max_pool2d(inputs,kernel_size=[2,2],stride=factor,padding="same")
+        # 维度对其还有问题
+        return tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=factor, padding="same")(inputs)
+        # return slim.max_pool2d(inputs,kernel_size=[2,2],strides=factor,padding="same")
 
 
 class MyResidualBlock(tf.keras.layers.Layer):
@@ -86,14 +88,14 @@ class MyResidualBlock(tf.keras.layers.Layer):
       name=None,
       activation="relu"):
     
-    super(ResidualBlock, self).__init__()
+    super(MyResidualBlock, self).__init__()
 
 
     block = [
-        tf.keras.layers.Conv2D(filters, kernel_size, stride=1, padding="same"),
+        tf.keras.layers.Conv2D(filters, kernel_size, strides=1, padding="same"),
         ChannelNorm(),
         tf.keras.layers.Activation(activation),
-        tf.keras.layers.Conv2D(filters, kernel_size, stride=2, padding="same"),
+        tf.keras.layers.Conv2D(filters, kernel_size, strides=2, padding="same"),
         ChannelNorm()]
 
     self.block = tf.keras.Sequential(name=name, layers=block)

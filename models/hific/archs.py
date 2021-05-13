@@ -13,9 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 """Implement the components needed for HiFiC.
-
 For more details, see the paper: https://arxiv.org/abs/2006.09965
-
 The default values for all constructors reflect what was used in the paper.
 """
 
@@ -65,22 +63,98 @@ HyperInfo = collections.namedtuple(
 )
 
 
+def subsample(inputs,factor,scope=None):
+    """
+    :param inputs: 输入数据
+    :param factor: 采样因子,stride步长
+    :param scope: 作用域
+    :return:
+    """
+    if factor==1:
+        return inputs
+    else:
+        return slim.max_pool2d(inputs,kernel_size=[2,2],stride=factor,padding="same")
+
+
+class MyResidualBlock(tf.keras.layers.Layer):
+  """Implement a residual block."""
+
+  def __init__(
+      self,
+      filters,
+      kernel_size=3,
+      name=None,
+      activation="relu"):
+    
+    super(ResidualBlock, self).__init__()
+
+
+    block = [
+        tf.keras.layers.Conv2D(filters, kernel_size, stride=1, padding="same"),
+        ChannelNorm(),
+        tf.keras.layers.Activation(activation),
+        tf.keras.layers.Conv2D(filters, kernel_size, stride=2, padding="same"),
+        ChannelNorm()]
+
+    self.block = tf.keras.Sequential(name=name, layers=block)
+
+  def call(self, inputs):
+    outputs = subsample(inputs, 2) + self.block(inputs)
+    return outputs
+
+  
 class Encoder(tf.keras.Sequential):
-  """Encoder architecture."""
+  
+  def __init__(self,
+               name="Encoder",
+               num_down=4,
+               num_filters_base=60,
+               num_filters_bottleneck=220):
+    self._num_down = num_down
+    
+    model = [
+        tf.keras.layers.Conv2D(
+            filters=num_filters_base, kernel_size=7, padding="same"),
+        ChannelNorm(),
+        tf.keras.layers.ReLU()
+    ]
+    
+    for i in range(num_down):
+      model.extend([
+        MyResidualBlock(
+          filters=num_filters_base * 2 ** (i+1)
+          )
+      ])
+
+    model.append(
+        tf.keras.layers.Conv2D(
+            filters=num_filters_bottleneck,
+            kernel_size=3, padding="same"))
+
+    super(Encoder, self).__init__(layers=model, name=name)
+
+  @property
+  def num_downsampling_layers(self):
+    return self._num_down
+
+               
+
+"""
+class Encoder(tf.keras.Sequential):
+  """ """Encoder architecture.""" """
 
   def __init__(self,
                name="Encoder",
                num_down=4,
                num_filters_base=60,
                num_filters_bottleneck=220):
-    """Instantiate model.
-
+    Instantiate model.
     Args:
       name: Name of the layer.
       num_down: How many downsampling layers to use.
       num_filters_base: Num filters to base multiplier on.
       num_filters_bottleneck: Num filters to output for bottleneck (latent).
-    """
+   
     self._num_down = num_down
 
     model = [
@@ -109,6 +183,8 @@ class Encoder(tf.keras.Sequential):
   def num_downsampling_layers(self):
     return self._num_down
 
+"""
+
 
 class Decoder(tf.keras.layers.Layer):
   """Decoder/generator architecture."""
@@ -120,7 +196,6 @@ class Decoder(tf.keras.layers.Layer):
                num_residual_blocks=9,
               ):
     """Instantiate layer.
-
     Args:
       name: name of the layer.
       num_up: how many upsampling layers.
@@ -185,7 +260,6 @@ class ResidualBlock(tf.keras.layers.Layer):
       activation="relu",
       **kwargs_conv2d):
     """Instantiate layer.
-
     Args:
       filters: int, number of filters, passed to the conv layers.
       kernel_size: int, kernel_size, passed to the conv layers.
@@ -214,7 +288,6 @@ class ResidualBlock(tf.keras.layers.Layer):
 
 class ChannelNorm(tf.keras.layers.Layer):
   """Implement ChannelNorm.
-
   Based on this paper and keras' InstanceNorm layer:
     Ba, Jimmy Lei, Jamie Ryan Kiros, and Geoffrey E. Hinton.
     "Layer normalization."
@@ -229,7 +302,6 @@ class ChannelNorm(tf.keras.layers.Layer):
                gamma_initializer="ones",
                **kwargs):
     """Instantiate layer.
-
     Args:
       epsilon: For stability when normalizing.
       center: Whether to create and use a {beta}.
@@ -300,7 +372,6 @@ class ChannelNorm(tf.keras.layers.Layer):
 
 class _PatchDiscriminatorCompareGANImpl(abstract_arch.AbstractDiscriminator):
   """PatchDiscriminator architecture.
-
   Implemented as a compare_gan layer. This has the benefit that we can use
   spectral_norm from that framework.
   """
@@ -311,7 +382,6 @@ class _PatchDiscriminatorCompareGANImpl(abstract_arch.AbstractDiscriminator):
                num_layers=3,
                ):
     """Instantiate discriminator.
-
     Args:
       name: Name of the layer.
       num_filters_base: Number of base filters. will be multiplied as we
@@ -375,7 +445,6 @@ class _PatchDiscriminatorCompareGANImpl(abstract_arch.AbstractDiscriminator):
 
 class _CompareGANLayer(tf.keras.layers.Layer):
   """Base class for wrapping compare_gan classes as keras layers.
-
   The main task of this class is to provide a keras-like interface, which
   includes a `trainable_variables`. This is non-trivial however, as
   compare_gan uses tf.get_variable. So we try to use the name scope to find
@@ -387,7 +456,6 @@ class _CompareGANLayer(tf.keras.layers.Layer):
                compare_gan_cls,
                **compare_gan_kwargs):
     """Constructor.
-
     Args:
       name: Name of the layer. IMPORTANT: Setting this to the same string
         for two different layers will cause unexpected behavior since variables
@@ -496,12 +564,10 @@ class Hyperprior(tf.keras.layers.Layer):
 
   def call(self, latents, image_shape, mode: ModelMode) -> HyperInfo:
     """Apply this layer to code `latents`.
-
     Args:
       latents: Tensor of latent values to code.
       image_shape: The [height, width] of a reference frame.
       mode: The training, evaluation or validation mode of the model.
-
     Returns:
       A HyperInfo tuple.
     """
@@ -612,12 +678,10 @@ class FactorizedPriorLayer(tf.keras.layers.Layer):
 
   def call(self, latents, image_shape, mode: ModelMode) -> FactorizedPriorInfo:
     """Apply this layer to code `latents`.
-
     Args:
       latents: Tensor of latent values to code.
       image_shape: The [height, width] of a reference frame.
       mode: The training, evaluation or validation mode of the model.
-
     Returns:
       A FactorizedPriorInfo tuple
     """
@@ -653,13 +717,11 @@ class FactorizedPriorLayer(tf.keras.layers.Layer):
 
 def estimate_entropy(entropy_model, inputs, spatial_shape=None) -> EntropyInfo:
   """Compresses `inputs` with the given entropy model and estimates entropy.
-
   Args:
     entropy_model: An `EntropyModel` instance.
     inputs: The input tensor to be fed to the entropy model.
     spatial_shape: Shape of the input image (HxW). Must be provided for
       `valid == False`.
-
   Returns:
     The 'noisy' and quantized inputs, as well as differential and discrete
     entropy estimates, as an `EntropyInfo` named tuple.

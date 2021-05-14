@@ -63,7 +63,7 @@ HyperInfo = collections.namedtuple(
 )
 
 
-def subsample(inputs,factor,scope=None):
+def subsample(inputs, filters, factor):
     """
     :param inputs: 输入数据
     :param factor: 采样因子,stride步长
@@ -74,7 +74,7 @@ def subsample(inputs,factor,scope=None):
         return inputs
     else:
         # 维度对其还有问题
-        return tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=factor, padding="same")(inputs)
+        return tf.keras.layers.Conv2D(filters=filters, kernel_size = 2, strides=factor, padding="same")(inputs)
         # return slim.max_pool2d(inputs,kernel_size=[2,2],strides=factor,padding="same")
 
 
@@ -99,9 +99,12 @@ class MyResidualBlock(tf.keras.layers.Layer):
         ChannelNorm()]
 
     self.block = tf.keras.Sequential(name=name, layers=block)
+    
+    self.filters = filters
 
   def call(self, inputs):
-    outputs = subsample(inputs, 2) + self.block(inputs)
+    outputs = subsample(inputs, self.filters, 2) + self.block(inputs)
+    # outputs = tf.keras.layers.Conv2D(filters=self.filters, kernel_size = 2, strides=2, padding="same")(inputs) + self.block(inputs)
     return outputs
 
   

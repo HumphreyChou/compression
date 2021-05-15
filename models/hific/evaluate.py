@@ -96,9 +96,9 @@ def eval_trained_model(config_name,
         # Save images.
         name = image_names.get(i, f'img_{i}')
         Image.fromarray(inp_np).save(
-            os.path.join(out_dir, f'{name}_inp.tiff'))
+            os.path.join(out_dir, f'{name}_inp.png'))
         Image.fromarray(otp_np).save(
-            os.path.join(out_dir, f'{name}_otp.tiff'))
+            os.path.join(out_dir, f'{name}_otp.png'))
 
       except tf.errors.OutOfRangeError:
         print('No more inputs.')

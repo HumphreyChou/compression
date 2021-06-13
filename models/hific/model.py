@@ -782,6 +782,7 @@ class HiFiC(object):
     # Check that we didn't miss any variables.
     all_trainable = set(tf.trainable_variables())
     all_known = set(transform_vars + entropy_vars + disc_vars)
+    """
     if ((all_trainable != all_known) and
         all_trainable != set(transform_vars_non_trainable) | all_known):
       all_known |= set(transform_vars_non_trainable)
@@ -794,6 +795,7 @@ class HiFiC(object):
                        " Missing in known: " + str(missing_in_known) +
                        " \n\nNon trainable transform vars: " +
                        non_trainable_vars_str)
+    """
 
     return entropy_vars, transform_vars, disc_vars
 
